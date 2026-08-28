@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Database files (local data, may contain sensitive info)
+finance.db
+finance.db.enc
+finance.db.meta
+*.db
+*.db.enc
+*.db.meta
+
+# Excel import (local user data, not part of the project)
+data.xlsx
+*.xlsx
+
+# Secrets / credentials
+*.key
+.env
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
