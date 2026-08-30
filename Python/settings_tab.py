@@ -541,7 +541,7 @@ class SettingsTab(QWidget):
         if not self.converter.validate_currency(code):
             QMessageBox.warning(
                 self, "Invalid Currency",
-                f"'{code}' is not a recognized currency (could not verify it via yfinance)."
+                f"'{code}' is not a recognized currency (could not verify it via open.er-api.com)."
             )
             return
         self.db.add_currency(code)

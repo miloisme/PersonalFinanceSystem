@@ -1,0 +1,61 @@
+# ==========================
+# Python Desktop App
+# ==========================
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+*.whl
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# ---------- Database files ----------
+*.db
+*.db.enc
+*.db.meta
+*.db-wal
+*.db-shm
+*.db-journal
+
+# ---------- Secrets / Credentials ----------
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+client_secret.json
+drive_token.json
+drive_state.json
+
+# ---------- Excel / CSV output ----------
+*.xlsx
+*.csv
+
+# ---------- IDE / Editor ----------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ---------- Temp / Logs ----------
+*.tmp
+*.temp
+*.log
+*.bak
+*.orig

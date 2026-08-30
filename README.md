@@ -1,159 +1,171 @@
-# 💰 Personal Finance System
-
 <div align="center">
 
-**A local-first, privacy-oriented personal finance desktop application**
+# Personal Finance System
 
-[![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=flat-square)](https://www.python.org/)
-[![PySide6](https://img.shields.io/badge/GUI-PySide6%206.5%2B-2c3e50?style=flat-square)](https://doc.qt.io/qtforpython/)
-[![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?style=flat-square)](https://www.sqlite.org/)
-[![Encryption](https://img.shields.io/badge/Encryption-AES--256--GCM-green?style=flat-square)](https://cryptography.io/)
-[![Exchange Rates](https://img.shields.io/badge/Exchange%20Rates-yfinance-ff9900?style=flat-square)](https://github.com/ranaroussi/yfinance)
-[![Charts](https://img.shields.io/badge/Charts-Matplotlib-11557c?style=flat-square)](https://matplotlib.org/)
+**A cross-platform, privacy-first personal finance manager with end-to-end encryption**
+
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?style=flat-square&logo=python)](Python/)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.2-7F52FF?style=flat-square&logo=kotlin)](Android/)
+[![PySide6](https://img.shields.io/badge/Gui-PySide6%206.5%2B-41CD52?style=flat-square)](Python/)
+[![Compose](https://img.shields.io/badge/Ui-Jetpack%20Compose-4285F4?style=flat-square&logo=jetpackcompose)](Android/)
+[![SQLite](https://img.shields.io/badge/Database-SQLite-003B57?style=flat-square)](https://www.sqlite.org/)
+[![AES-256](https://img.shields.io/badge/Encryption-AES--256--GCM-green?style=flat-square)](https://cryptography.io/)
+[![Drive](https://img.shields.io/badge/Cloud%20Sync-Google%20Drive-4285F4?style=flat-square&logo=google)](https://developers.google.com/drive)
+
+---
+
+**Personal Finance System** is a local-first, privacy-oriented finance manager available as both a **Python/Qt desktop app** and a **native Android (Kotlin/Compose) app**. Your data never leaves your device unencrypted -- all databases are protected with AES-256-GCM and can be synced to Google Drive as ciphertext only.
 
 </div>
 
 ---
 
-## 📌 Introduction
+## Why Personal Finance System?
 
-**Personal Finance System** is a desktop finance application built with **Python + PySide6 (Qt)**.
-All data is stored in a local **SQLite** database and can optionally be protected with
-**AES-256-GCM** encryption. It offers multi-currency management, income/expense tracking,
-debt and receivable tracking, budgeting, net-worth charts, and a direct SQL console — a
-complete toolkit for users who want full control over their personal finances.
+| Feature | Details |
+|---------|---------|
+| **True Ownership** | All data is stored in a local SQLite database on your device. No cloud account required. No data leaves your device unless you choose to sync. |
+| **Bank-Grade Encryption** | AES-256-GCM with PBKDF2 key derivation (600,000 iterations). Even the cloud sync only transmits ciphertext. |
+| **Multi-Currency** | 11 built-in currencies with live exchange rates from a free API. Automatic conversion across all views. |
+| **Full Feature Set** | Accounts, transactions, debts, budgets, earmarked funds, 12-month forecasts, net worth tracking, charts, notes, SQL console -- everything in one app. |
+| **Cross-Platform** | Desktop (Python/Qt) and Mobile (Android/Compose) with compatible encrypted databases. |
+| **No Lock-In** | Open-source (MIT license), standard SQLite, exportable to CSV. |
 
-> Your data stays on this device only. When encryption is enabled, the database is encrypted
-> at rest using a password-derived key (PBKDF2) and is only decrypted at login time.
+---
 
-## ✨ Features
+## Platform Comparison
 
-| Module             | Description                                                                                                                                                                                                       |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 📊 **Dashboard**    | Asset/liability trend charts, income vs. expense comparison, balance charts, and an editable period summary (monthly or yearly). Shows upcoming debt and credit-card payment reminders.                           |
-| 💼 **Budget**       | Choose which accounts to include, set aside "earmarked" funds linked to categories, and automatically compute how many months they cover. 12-month forward projections for assets/liabilities and income/expense. |
-| 🏦 **Accounts**     | Manage multi-currency accounts (cash, bank, investment, etc.), support same-currency transfers between accounts, and visualize balances and allocation.                                                           |
-| ⚖️ **Balance**      | View per-account and overall net worth in a base currency, with automatic cross-currency conversion.                                                                                                              |
-| 🧾 **Transactions** | Add / edit / delete income and expense records, with category, account, currency, exchange rate, plus date-range filtering and sorting.                                                                           |
-| 💳 **Debts**        | Manage loans, credit cards, mortgages, and "money owed to me" receivables, including repayment progress, interest rates, and due dates.                                                                           |
-| 📝 **Notes**        | A simple personal note list for capturing financial thoughts anytime.                                                                                                                                             |
-| 💻 **SQL Console**  | Run arbitrary SQL directly against the local database — `SELECT` shows results, other statements show affected row counts.                                                                                        |
-| ⚙️ **Settings**     | Base-currency configuration, currency management and rate refresh, income/expense category management, database encryption toggle, CSV export, and data reset.                                                    |
+| Feature | Python Desktop | Android |
+|---------|---------------|---------|
+| **Language** | Python 3.8+ | Kotlin 2.2 |
+| **UI Framework** | PySide6 (Qt 6) | Jetpack Compose (Material3) |
+| **Charts** | Matplotlib (embedded) | Custom Compose Canvas |
+| **Database** | SQLite (`sqlite3` module) | SQLite (`SQLiteOpenHelper`) |
+| **Encryption** | `cryptography` (AES-GCM) | AndroidKeyStore + AES-GCM |
+| **Biometric Auth** | -- | Fingerprint / Face Unlock |
+| **Cloud Sync** | Google Drive (OAuth browser flow) | Google Drive (Google Sign-In) |
+| **Exchange Rates** | `open.er-api.com` | `open.er-api.com` |
+| **CSV Export** | Yes | -- |
+| **SQL Console** | Yes | Yes |
+| **Min OS** | Windows (recommended) | Android 7.0 (API 24) |
 
-### Additional Highlights
+---
 
-- **Multi-currency with live rates**: 11 built-in currencies (CNY, HKD, USD, EUR, GBP, JPY, TWD, KRW, SGD, AUD, CAD), fetched via `yfinance`, with an offline fallback rate table.
-- **Local encryption**: Enable AES-256-GCM encryption; the key is derived from your password via PBKDF2 (600,000 iterations). On exit the plaintext database is securely wiped (`secure_delete`).
-- **CSV export**: Export any table to UTF-8 (with BOM) CSV for easy opening in Excel.
+## Feature Overview
 
-## 🖥️ Requirements
+### Financial Management
 
-- **Operating System**: Windows (UI fonts use Microsoft JhengHei / Microsoft YaHei; running on Windows is recommended)
-- **Python**: 3.8 or newer
-- **Dependencies**:
+- **Account Management** -- Create accounts in any currency (Cash, Investment, Fixed types), transfer between same-currency accounts, asset allocation visualization
+- **Transaction Tracking** -- Income/expense records with category, account, multi-currency support, automatic balance updates
+- **Debt & Credit Tracking** -- Loans, credit cards, mortgages, receivables with progress bars, interest rates, due-date alerts, overdue warnings
+- **Budget Planning** -- Select budget-eligible accounts, earmarked funds with category linkage, 12-month forward projections with editable forecasts
+- **Net Worth Tracking** -- Historical snapshots with manual override, year-over-year comparison
 
-  ```
-  PySide6>=6.5.0
-  matplotlib>=3.7.0
-  yfinance>=0.2.36
-  ```
+### Analytics & Visualization
 
-## 🚀 Installation & Usage
+- **Dashboard** -- Assets/liabilities trend, income vs. expense, balance charts, period summary table
+- **Balance Review** -- Annual monthly matrix with category breakdown, sparkline trends, saving rate
+- **Budget Forecast** -- Line and bar charts for 12-month projections
+- **Custom Charts** -- Pie charts, line charts, bar charts, combo charts, sparklines (all hand-drawn)
 
-1. Clone (or download) the repository to your machine:
+### Data & Security
 
-   ```bash
-   git clone <repo-url>
-   cd PersonalFinanceSystem
-   ```
+- **AES-256-GCM Encryption** -- Full database encryption with PBKDF2-derived keys
+- **Secure Delete** -- 3-pass file shredding before deletion
+- **Biometric Unlock** -- Android fingerprint/face authentication (Android only)
+- **Google Drive Sync** -- Encrypted database sync with conflict detection
+- **CSV Export** -- Export any table to Excel-compatible CSV
+- **SQL Console** -- Direct database access for power users
 
-2. Create and activate a virtual environment (recommended):
+---
 
-   ```bash
-   python -m venv venv
-   venv\Scripts\activate
-   ```
+## Getting Started
 
-3. Install the dependencies:
+### Python Desktop
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+cd Python
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+python main.py
+```
 
-4. Launch the application:
+See [Python/README.md](Python/README.md) for full documentation.
 
-   ```bash
-   python main.py
-   ```
+### Android
 
-   On first launch, `finance.db` (unencrypted) is created and the login screen appears — click **Open** to start using it. If you later enable encryption in **Settings**, a password will be required on subsequent logins.
+1. Open `Android/` in Android Studio
+2. Create `.env` with `GEMINI_API_KEY` (optional)
+3. Run on emulator or device (min SDK 24)
 
-## 🗂️ Project Structure
+See [Android/README.md](Android/README.md) for full documentation.
+
+---
+
+## Project Structure
 
 ```
 PersonalFinanceSystem/
-├── main.py               # Entry point: initializes the Qt app, login flow, and main window
-├── main_window.py        # Main window with side navigation, integrating all feature tabs
-├── login_window.py       # Login / unlock window (shows password input based on encryption state)
-├── database.py           # SQLite data-access layer (accounts, categories, transactions, debts, settings, …)
-├── db_crypto.py          # AES-256-GCM encryption, PBKDF2 key derivation, secure delete
-├── currency_converter.py # Multi-currency rates (yfinance + fallback table), singleton cache
-├── accounts_tab.py       # Accounts tab
-├── balance_tab.py        # Balance tab
-├── transactions_tab.py   # Transactions tab
-├── debts_tab.py          # Debts / receivables tab
-├── charts_tab.py         # Dashboard (charts and period summary)
-├── budget_tab.py         # Budget and forward-projection tab
-├── notes_tab.py          # Notes tab
-├── sql_tab.py            # SQL console tab
-├── settings_tab.py       # Settings tab (currencies, categories, encryption, export)
-├── table_utils.py        # Table sorting / filtering helpers
-├── font_utils.py         # CJK font configuration helpers
-├── requirements.txt      # Python dependencies
-├── finance.db           # Plaintext database (when encryption is disabled)
-├── finance.db.enc       # Encrypted database (when encryption is enabled)
-└── finance.db.meta      # Encryption metadata (salt, verifier)
+├── README.md               # This file
+├── LICENSE                  # MIT License
+├── Python/                 # Desktop application
+│   ├── main.py             # Entry point
+│   ├── main_window.py      # Main window + sidebar navigation
+│   ├── login_window.py     # Login / encryption unlock
+│   ├── database.py         # SQLite data access layer
+│   ├── db_crypto.py        # AES-256-GCM encryption engine
+│   ├── currency_converter.py # Live exchange rates
+│   ├── drive_sync.py       # Google Drive sync
+│   ├── *_tab.py            # Feature tabs (9 tabs)
+│   ├── table_utils.py      # Table helpers
+│   ├── font_utils.py       # CJK font support
+│   └── requirements.txt    # Python dependencies
+├── Android/                # Mobile application
+│   ├── app/src/main/java/com/example/
+│   │   ├── MainActivity.kt # Entry point + navigation
+│   │   ├── crypto/         # Encryption + biometric
+│   │   ├── data/           # Database + models
+│   │   ├── sync/           # Drive sync + currency
+│   │   └── ui/             # Screens + charts + theme
+│   ├── build.gradle.kts    # Build configuration
+│   └── gradle/             # Gradle wrapper + version catalog
+└── .git/                   # Git repository
 ```
 
-## 🔐 Database Encryption
+---
 
-In **Settings → Database Encryption (AES-256)**, check "Encrypt this database with a password",
-enter and confirm a password, then click **Apply Encryption Settings** to enable it.
+## Security at a Glance
 
-- The key is derived via `PBKDF2HMAC(SHA256, 600000 iterations)` from your password and a random salt.
-- The database is encrypted with `AESGCM` using a 12-byte nonce, and a verifier confirms password correctness.
-- Once enabled, `finance.db` is encrypted into `finance.db.enc`, and the plaintext file is overwritten with random data and securely deleted.
-- On application exit (`before main.py terminates`) the plaintext is automatically re-encrypted and wiped.
+| Property | Value |
+|----------|-------|
+| Encryption | AES-256-GCM |
+| Key derivation | PBKDF2-HMAC-SHA256 |
+| Iterations | 600,000 |
+| Salt | 16-byte random |
+| Nonce | 12-byte random |
+| Cloud sync | Ciphertext only |
+| Biometric | Android Keystore (Android app only) |
 
-> ⚠️ Remember your password. A lost password makes the encrypted database unrecoverable.
+---
 
-## 💱 Exchange Rates
+## Supported Currencies
 
-- Rates are sourced from `yfinance` live currency pairs (e.g. `USDHKD=X`).
-- If there is no network access or a lookup fails, the app falls back to the built-in fallback rate table (see `fallback_rates` in `currency_converter.py`).
-- Click **Refresh Rates** in **Settings** to force a refresh, or add/remove currencies (new codes are validated via `yfinance`).
+CNY (¥) | HKD (HK$) | USD ($) | EUR (€) | GBP (£) | JPY (¥) | TWD (NT$) | KRW (₩) | SGD (S$) | AUD (A$) | CAD (C$)
 
-## 🛠️ Tech Stack
+Live rates from [open.er-api.com](https://open.er-api.com/) with offline fallback table.
 
-- **Language**: Python 3
-- **GUI Framework**: PySide6 (Qt 6)
-- **Charts**: Matplotlib (embedded via Qt `FigureCanvasQTAgg`)
-- **Database**: SQLite (via the standard `sqlite3` module)
-- **Encryption**: `cryptography` package's AES-GCM and PBKDF2
-- **Exchange Rates**: `yfinance`
-- **Design**: Fusion style + custom stylesheet (dark sidebar, card-based layout)
+---
 
-## ✅ Usage Tips
-
-- Periodically back up your data via **Export to CSV** in **Settings**.
-- Enable encryption for better security, but always remember your password.
-- When recording across currencies, make sure the relevant currency is added and rates are refreshed for accurate base-currency conversion.
-
-## 📄 License
+## License
 
 This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-<p align="center">Made with Python & Qt 💙</p>
+<div align="center">
+
+**Built with Python, Qt, Kotlin, and Jetpack Compose**
+
+</div>

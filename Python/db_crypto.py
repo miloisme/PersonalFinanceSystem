@@ -3,6 +3,8 @@ import time
 import gc
 import json
 import base64
+import hashlib
+import datetime
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
@@ -129,3 +131,44 @@ def secure_delete(path: str, retries: int = 6):
             os.remove(path)
         except Exception:
             pass
+
+
+# ---------------------------------------------------------------------------
+# Sync / metadata helpers (used by drive_sync.py)
+# These are additive and fully backward-compatible with the original meta
+# format ({ "encryption", "salt", "verifier" }).
+# ---------------------------------------------------------------------------
+
+SCHEMA_VERSION = 1
+
+
+def plaintext_md5(data: bytes) -> str:
+    return hashlib.md5(data).hexdigest()
+
+
+def utc_now_iso() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def device_name() -> str:
+    import socket
+    try:
+        return socket.gethostname() or "PC"
+    except Exception:
+        return "PC"
+
+
+def update_meta_sync_info(meta: dict, *, updated_at: str = None,
+                          device: str = None, plaintext_data: bytes = None) -> dict:
+    """Augment a meta dict with lightweight sync/audit fields."""
+    meta = dict(meta)
+    meta["schema_version"] = SCHEMA_VERSION
+    if updated_at is not None:
+        meta["updated_at"] = updated_at
+    else:
+        meta["updated_at"] = utc_now_iso()
+    if device is not None:
+        meta["device_name"] = device
+    if plaintext_data is not None:
+        meta["db_md5"] = plaintext_md5(plaintext_data)
+    return meta

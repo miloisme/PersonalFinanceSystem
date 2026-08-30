@@ -2,10 +2,18 @@
     QApplication,
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QStackedWidget, QFrame,
-    QSizePolicy, QSpacerItem
+    QSizePolicy, QSpacerItem, QMessageBox
 )
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QFont, QIcon
+import os
+import datetime
+
+from drive_sync import (
+    is_client_configured, is_authenticated, is_available, authenticate,
+    upload as drive_upload, download as drive_download,
+    remote_meta, get_last_synced_at, _device_name,
+)
 
 from accounts_tab import AccountsTab
 from balance_tab import BalanceTab
@@ -80,9 +88,17 @@ class MainWindow(QMainWindow):
     def setup_ui(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        main_layout = QHBoxLayout(central_widget)
+        root_layout = QVBoxLayout(central_widget)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
+
+        self._build_sync_toolbar()
+        root_layout.addWidget(self.sync_bar)
+
+        main_layout = QHBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
+        root_layout.addLayout(main_layout)
 
         sidebar = QFrame()
         sidebar.setFixedWidth(190)
@@ -230,3 +246,127 @@ class MainWindow(QMainWindow):
 
     def update_total_balance(self):
         pass
+
+    # ----- Google Drive sync -----
+    def _build_sync_toolbar(self):
+        self.sync_bar = QFrame()
+        self.sync_bar.setFixedHeight(44)
+        self.sync_bar.setStyleSheet("QFrame { background-color: #1a252f; }")
+        bar = QHBoxLayout(self.sync_bar)
+        bar.setContentsMargins(12, 4, 12, 4)
+        bar.setSpacing(8)
+
+        title = QLabel("\u2601 Drive Sync")
+        title.setStyleSheet("color: #ecf0f1; font-weight: bold; font-size: 13px;")
+        bar.addWidget(title)
+
+        self.btn_login = QPushButton("Login Google")
+        self.btn_upload = QPushButton("\u2191 Upload")
+        self.btn_download = QPushButton("\u2193 Download")
+        for b in (self.btn_login, self.btn_upload, self.btn_download):
+            b.setStyleSheet("""
+                QPushButton { background-color: #3498db; color: white; border: none;
+                              padding: 6px 14px; border-radius: 5px; font-size: 12px; }
+                QPushButton:hover { background-color: #2980b9; }
+                QPushButton:disabled { background-color: #566573; color: #aaa; }
+            """)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_login.clicked.connect(self.on_login)
+        self.btn_upload.clicked.connect(self.on_upload)
+        self.btn_download.clicked.connect(self.on_download)
+        bar.addWidget(self.btn_login)
+        bar.addWidget(self.btn_upload)
+        bar.addWidget(self.btn_download)
+
+        bar.addSpacerItem(QSpacerItem(
+            20, 10, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum))
+
+        self.sync_status = QLabel("")
+        self.sync_status.setStyleSheet("color: #bdc3c7; font-size: 12px;")
+        bar.addWidget(self.sync_status)
+
+        self.refresh_sync_status()
+
+    def refresh_sync_status(self):
+        if not is_available():
+            self.sync_status.setText("缺少 Google 库 (pip install -r requirements.txt)")
+            self.btn_upload.setEnabled(False)
+            self.btn_download.setEnabled(False)
+            return
+        if not is_client_configured():
+            self.sync_status.setText("未配置 client_secret.json")
+            self.btn_upload.setEnabled(False)
+            self.btn_download.setEnabled(False)
+            return
+        if not is_authenticated():
+            self.sync_status.setText("未登录 Google")
+            self.btn_upload.setEnabled(False)
+            self.btn_download.setEnabled(False)
+            return
+        last = get_last_synced_at()
+        if last:
+            self.sync_status.setText(f"已登录 · 上次同步: {last}")
+        else:
+            self.sync_status.setText("已登录 · 尚未同步")
+        self.btn_upload.setEnabled(True)
+        self.btn_download.setEnabled(True)
+
+    @staticmethod
+    def _iso_to_epoch(iso):
+        try:
+            return datetime.datetime.strptime(
+                iso, "%Y-%m-%dT%H:%M:%SZ"
+            ).replace(tzinfo=datetime.timezone.utc).timestamp()
+        except Exception:
+            return 0
+
+    def on_login(self):
+        try:
+            authenticate()
+            QMessageBox.information(self, "Google Drive", "登录成功，可开始同步。")
+        except Exception as e:
+            QMessageBox.warning(self, "登录失败", str(e))
+        self.refresh_sync_status()
+
+    def on_upload(self):
+        try:
+            remote = remote_meta()
+            last = get_last_synced_at()
+            if remote and remote.get("updated_at") and last and remote["updated_at"] > last:
+                resp = QMessageBox.warning(
+                    self, "云端数据较新",
+                    f"云端数据更新于 {remote['updated_at']}，本地上次同步于 {last}。\n"
+                    "上传将覆盖云端数据，是否继续？",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                if resp == QMessageBox.StandardButton.No:
+                    return
+            updated = drive_upload(self.db, device=_device_name())
+            self.refresh_sync_status()
+            QMessageBox.information(
+                self, "上传成功", f"已上传至 Google Drive\n更新时间: {updated}")
+        except Exception as e:
+            QMessageBox.warning(self, "上传失败", str(e))
+
+    def on_download(self):
+        try:
+            remote = remote_meta()
+            last = get_last_synced_at()
+            if remote and remote.get("updated_at") and last and remote["updated_at"] <= last:
+                local_mtime = (
+                    os.path.getmtime(self.db.db_path)
+                    if os.path.exists(self.db.db_path) else 0
+                )
+                if local_mtime > self._iso_to_epoch(last):
+                    resp = QMessageBox.warning(
+                        self, "本地有未同步改动",
+                        "本地数据库自上次同步后有改动，下载将覆盖本地数据，是否继续？",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                    if resp == QMessageBox.StandardButton.No:
+                        return
+            drive_download(self.db)
+            self.refresh_all_tabs()
+            self.refresh_sync_status()
+            QMessageBox.information(
+                self, "下载成功", "已从 Google Drive 同步并刷新界面。")
+        except Exception as e:
+            QMessageBox.warning(self, "下载失败", str(e))

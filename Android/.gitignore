@@ -1,0 +1,48 @@
+# ==========================
+# Android App
+# ==========================
+
+# ---------- Gradle ----------
+.gradle/
+/local.properties
+/build/
+/app/build/
+/generated/
+
+# ---------- Kotlin ----------
+.kotlin/
+
+# ---------- IDE ----------
+.idea/
+*.iml
+*.ipr
+*.iws
+/out/
+
+# ---------- Android Studio ----------
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# ---------- Secrets / Credentials ----------
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+debug.keystore
+google-services.json
+app/google-services.json
+
+# ---------- Firebase ----------
+**/google-services.json
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ---------- Misc ----------
+*.log
+*.tmp
+*.bak

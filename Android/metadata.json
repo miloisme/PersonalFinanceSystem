@@ -1,0 +1,7 @@
+{
+  "name": "Personal Finance",
+  "description": "Full-featured personal finance manager with Google Drive encrypted sync, budget forecasts, account allocations, transaction filters, balance reviews, and debt tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

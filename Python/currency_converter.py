@@ -1,8 +1,9 @@
-import yfinance as yf
 from typing import Dict, Optional
 import threading
 import time
 import datetime
+import json
+import urllib.request
 
 
 class CurrencyConverter:
@@ -55,13 +56,19 @@ class CurrencyConverter:
         return rows
 
     def _fetch_rate(self, from_currency: str, to_currency: str) -> Optional[float]:
+        # Live rates from open.er-api.com (free, no API key required), same source
+        # the Android app uses, so both platforms compute identical conversions.
         try:
-            ticker = yf.Ticker(f"{from_currency}{to_currency}=X")
-            data = ticker.history(period="1d")
-            if not data.empty:
-                rate = data['Close'].iloc[-1]
-                self._last_update = time.time()
-                return rate
+            url = f"https://open.er-api.com/v6/latest/{from_currency}"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            if data.get("result") == "success" and "rates" in data:
+                rates = data["rates"]
+                if to_currency in rates:
+                    rate = float(rates[to_currency])
+                    self._last_update = time.time()
+                    return rate
         except Exception as e:
             print(f"Failed to fetch exchange rate: {e}")
 
@@ -112,23 +119,24 @@ class CurrencyConverter:
         return ["CNY", "HKD", "USD", "EUR", "GBP", "JPY", "TWD", "KRW", "SGD", "AUD", "CAD"]
 
     def validate_currency(self, code: str) -> bool:
-        """Return True only if `code` is a plausibly real currency per yfinance.
+        """Return True if `code` looks like a real currency.
 
-        A 3-letter code is queried against USD (both directions); a non-empty
-        historical result means yfinance recognizes the pair.
+        Checks the code against the live open.er-api.com symbol list; if the
+        network is unavailable it falls back to accepting any well-formed
+        3-letter alphabetic code.
         """
         code = (code or "").strip().upper()
         if len(code) != 3 or not code.isalpha():
             return False
         try:
-            for pair in (f"{code}USD=X", f"USD{code}=X"):
-                ticker = yf.Ticker(pair)
-                data = ticker.history(period="5d")
-                if not data.empty:
-                    return True
+            url = "https://open.er-api.com/v6/latest/USD"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            rates = data.get("rates", {})
+            return code in rates
         except Exception:
-            return False
-        return False
+            return True
 
 
 def get_used_currencies(db) -> list:
