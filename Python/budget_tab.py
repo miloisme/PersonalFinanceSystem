@@ -22,6 +22,7 @@ from calendar import monthrange
 from currency_converter import CurrencyConverter
 from font_utils import set_cjk_font as _set_cjk_font
 from table_utils import enable_sort_filter
+from chart_tooltips import enable_line_hover
 
 _cjk_font = FontProperties(family=["Microsoft JhengHei", "Microsoft YaHei", "Segoe UI"])
 matplotlib.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'Microsoft YaHei', 'Segoe UI', 'DejaVu Sans']
@@ -612,6 +613,11 @@ class BudgetTab(QWidget):
         ax.legend(fontsize=9, loc='upper left')
         ax.grid(axis='y', alpha=0.3)
         ax.tick_params(labelsize=8)
+        sym = _currency_symbol(self.db.get_base_currency())
+        enable_line_hover(self.line_canvas, self.line_fig, ax, labels, [
+            {"label": "Assets", "values": assets, "color": COLOR_ASSETS},
+            {"label": "Liabilities", "values": liabilities, "color": COLOR_LIABILITIES},
+        ], sym)
         self.line_fig.tight_layout()
         self.line_canvas.draw()
 
@@ -645,6 +651,10 @@ class BudgetTab(QWidget):
         ], fontsize=9, loc='upper left')
         ax.grid(axis='y', alpha=0.3)
         ax.tick_params(labelsize=8)
+        sym = _currency_symbol(self.db.get_base_currency())
+        enable_line_hover(self.bar_canvas, self.bar_fig, ax, labels, [
+            {"label": "Balance", "values": balances, "color": COLOR_BAL_POS},
+        ], sym)
         self.bar_fig.tight_layout()
         self.bar_canvas.draw()
 

@@ -22,6 +22,7 @@ matplotlib.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'Microsoft YaHei
 matplotlib.rcParams['font.family'] = 'sans-serif'
 matplotlib.rcParams['axes.unicode_minus'] = False
 
+from chart_tooltips import enable_pie_hover
 from datetime import datetime
 
 
@@ -656,6 +657,7 @@ class AccountsTab(QWidget):
                 at.set_fontsize(pct_fontsize)
                 at.set_color(_text_color_for(c))
             ax.axis('equal')
+            enable_pie_hover(fig, ax, wedges, names, values, total, sym)
         fig.tight_layout()
         canvas.draw()
         canvas.flush_events()
@@ -797,7 +799,8 @@ class AccountsTab(QWidget):
         if isinstance(account, dict):
             account = Account(
                 id=account["id"], name=account["name"], currency=account["currency"],
-                balance=account["balance"], account_type=account["type"]
+                balance=account["balance"], account_type=account["type"],
+                notes=account.get("notes", "")
             )
         dialog = AccountDialog(self, account, db=self.db)
         if dialog.exec():

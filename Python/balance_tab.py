@@ -21,6 +21,7 @@ from datetime import datetime, date
 from currency_converter import CurrencyConverter
 from font_utils import set_cjk_font as _set_cjk_font
 from table_utils import enable_column_memory
+from chart_tooltips import enable_pie_hover, enable_line_hover
 
 _cjk_font = FontProperties(family=["Microsoft JhengHei", "Microsoft YaHei", "Segoe UI"])
 matplotlib.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'Microsoft YaHei', 'Segoe UI', 'DejaVu Sans']
@@ -307,6 +308,10 @@ class BalanceTab(QWidget):
         ax2.legend(handles=[Patch(color=C_BAL_POS, label="Balance (+)"),
                             Patch(color=C_BAL_NEG, label="Balance (-)")],
                    fontsize=7, loc="upper right")
+        enable_line_hover(self.comp_canvas, self.comp_fig, ax, MONTHS, [
+            {"label": "Income", "values": income, "color": C_INCOME},
+            {"label": "Expense", "values": expense, "color": C_EXPENSE},
+        ], self._symbol())
         self.comp_fig.tight_layout()
         self.comp_canvas.draw()
 
@@ -327,10 +332,11 @@ class BalanceTab(QWidget):
             canvas.draw()
             return
         values = [r["total"] for r in rows]
+        names = [_strip_emoji(r["name"]) for r in rows]
         labels = []
-        for r, v in zip(rows, values):
+        for name, v in zip(names, values):
             pct = (v / total * 100) if total else 0
-            labels.append(f"{_strip_emoji(r['name'])}\n{v:,.2f}" if pct >= 5.0 else "")
+            labels.append(f"{name}\n{v:,.2f}" if pct >= 5.0 else "")
         colors = [r["color"] for r in rows] or None
         wedges, _, _ = ax.pie(values, labels=labels, colors=colors,
                               autopct=lambda p: f"{p:.1f}%" if p >= 5.0 else "",
@@ -340,6 +346,7 @@ class BalanceTab(QWidget):
             w.set_linewidth(0.5)
             w.set_edgecolor("white")
         ax.axis("equal")
+        enable_pie_hover(fig, ax, wedges, names, values, total, self._symbol())
         fig.tight_layout()
         canvas.draw()
 

@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator, FuncFormatter
 from matplotlib.font_manager import FontProperties
 from PySide6.QtWidgets import QSizePolicy
+from chart_tooltips import enable_line_hover
 
 _cjk_font = FontProperties(family=["Microsoft JhengHei", "Microsoft YaHei", "Segoe UI"])
 
@@ -474,6 +475,11 @@ class ChartsTab(QWidget):
         ax.grid(axis='y', alpha=0.3)
         ax.tick_params(labelsize=8)
         _plain_axis(ax)
+        sym = self._get_currency_symbol(self.db.get_base_currency())
+        enable_line_hover(self.net_canvas, self.net_fig, ax, labels, [
+            {"label": "Assets", "values": asset_vals, "color": COLOR_ASSETS},
+            {"label": "Liabilities", "values": liab_vals, "color": COLOR_LIABILITIES},
+        ], sym)
         self.net_fig.tight_layout()
         self.net_canvas.draw()
 
@@ -560,6 +566,11 @@ class ChartsTab(QWidget):
         ax.tick_params(labelsize=8)
         ax.yaxis.set_major_locator(MaxNLocator(6))
         _plain_axis(ax)
+        sym = self._get_currency_symbol(self.db.get_base_currency())
+        enable_line_hover(self.ie_canvas, self.ie_fig, ax, labels, [
+            {"label": "Income", "values": incomes, "color": COLOR_INCOME},
+            {"label": "Expense", "values": expenses, "color": COLOR_EXPENSE},
+        ], sym)
         self.ie_fig.tight_layout()
         self.ie_canvas.draw()
 
@@ -595,5 +606,9 @@ class ChartsTab(QWidget):
         ax.yaxis.set_major_locator(MaxNLocator(6))
         ax.legend(fontsize=9, loc='upper left')
         _plain_axis(ax)
+        sym = self._get_currency_symbol(self.db.get_base_currency())
+        enable_line_hover(self.bal_canvas, self.bal_fig, ax, labels, [
+            {"label": "Balance", "values": balances, "color": COLOR_BALANCE},
+        ], sym)
         self.bal_fig.tight_layout()
         self.bal_canvas.draw()

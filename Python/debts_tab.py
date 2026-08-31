@@ -20,6 +20,7 @@ from database import Debt
 from currency_converter import CurrencyConverter
 from font_utils import set_cjk_font as _set_cjk_font
 from table_utils import enable_sort_filter
+from chart_tooltips import enable_pie_hover
 
 
 class DebtDialog(QDialog):
@@ -611,6 +612,7 @@ class DebtsTab(QWidget):
             t.set_path_effects([pe.withStroke(linewidth=2, foreground="#2c3e50")])
         ax.set_aspect("equal")
         ax.set_position([0.0, 0.0, 1.0, 1.0])
+        enable_pie_hover(canvas.figure, ax, wedges, names, sizes, total, unit)
         canvas.draw()
 
     def add_debt(self, party="me"):
