@@ -393,6 +393,7 @@ fun TransactionsScreen(
         var type by remember { mutableStateOf(editingTx?.type ?: "expense") }
         var amount by remember { mutableStateOf(editingTx?.amount?.toString() ?: "") }
         var currency by remember { mutableStateOf(editingTx?.currency ?: baseCurrency) }
+        var currencyExpanded by remember { mutableStateOf(false) }
         var selectedAccount by remember { mutableStateOf(accounts.find { it.id == editingTx?.accountId } ?: accounts.firstOrNull()) }
         var selectedCategory by remember { mutableStateOf(categories.find { it.id == editingTx?.categoryId } ?: categories.firstOrNull { it.type == type }) }
         var date by remember { mutableStateOf(editingTx?.date ?: SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())) }
@@ -437,7 +438,8 @@ fun TransactionsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    // Account selection
+                    // Account selection (selecting an account sets a default
+                    // currency, but only if the user hasn't overridden it manually)
                     Text("Account:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                     val accScroll = rememberScrollState()
                     Row(
@@ -449,10 +451,48 @@ fun TransactionsScreen(
                                 selected = selectedAccount?.id == a.id,
                                 onClick = {
                                     selectedAccount = a
-                                    currency = a.currency
+                                    if (editingTx == null && currency == baseCurrency) {
+                                        currency = a.currency
+                                    }
                                 },
                                 label = { Text(a.name, fontSize = 11.sp) }
                             )
+                        }
+                    }
+
+                    // Currency selection
+                    Text("Currency:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = "$currency (${CurrencyConverter.symbol(currency)})",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Currency") },
+                            trailingIcon = {
+                                IconButton(onClick = { currencyExpanded = !currencyExpanded }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Select Currency", tint = PrimaryBlue, modifier = Modifier.size(18.dp))
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { currencyExpanded = true }
+                        )
+                        DropdownMenu(
+                            expanded = currencyExpanded,
+                            onDismissRequest = { currencyExpanded = false },
+                            modifier = Modifier.fillMaxWidth(0.75f).heightIn(max = 260.dp)
+                        ) {
+                            currencies.forEach { c ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text("$c (${CurrencyConverter.symbol(c)})", fontWeight = if (c == currency) FontWeight.Bold else FontWeight.Normal)
+                                    },
+                                    onClick = {
+                                        currency = c
+                                        currencyExpanded = false
+                                    }
+                                )
+                            }
                         }
                     }
 

@@ -325,7 +325,9 @@ class MainWindow(QMainWindow):
             authenticate()
             QMessageBox.information(self, "Google Drive", "登录成功，可开始同步。")
         except Exception as e:
-            QMessageBox.warning(self, "登录失败", str(e))
+            QMessageBox.warning(
+                self, "登录失败",
+                f"{e}\n\n如需重新授权，请重试登录（将弹出浏览器重新完成认证）。")
         self.refresh_sync_status()
 
     def on_upload(self):

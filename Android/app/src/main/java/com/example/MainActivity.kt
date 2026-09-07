@@ -359,6 +359,7 @@ fun PersonalFinanceApp(viewModel: MainViewModel) {
                     transactions = uiState.transactions,
                     budgetAccountIds = uiState.budgetAccountIds,
                     forecast = uiState.forecast,
+                    history = uiState.netWorthHistory,
                     onToggleAccount = { id, checked -> viewModel.toggleBudgetAccountId(id, checked) },
                     onAddFund = { name, amt, cats -> viewModel.addFund(name, amt, cats) },
                     onUpdateFund = { id, name, amt, cats -> viewModel.updateFund(id, name, amt, cats) },

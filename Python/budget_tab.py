@@ -479,8 +479,10 @@ class BudgetTab(QWidget):
     def _month_series(self):
         today = datetime.now()
         cur = (today.year, today.month)
-        months = [_add_months(cur[0], cur[1], i) for i in range(13)]
-        return months, 0
+        # Start from the previous month so the table can show last month's
+        # realised figures (read-only) followed by the editable future.
+        months = [_add_months(cur[0], cur[1], i - 1) for i in range(13)]
+        return months, 1
 
     def _historical_net_worth(self):
         by_month = {}
@@ -498,27 +500,35 @@ class BudgetTab(QWidget):
             label = f"{y}-{m:02d}"
             ov = fc.get(label, {})
             s = self.db.get_monthly_summary(y, m)
-            if idx == 0 and label in hnw:
+            if idx < cur_idx:
+                # Last month: show the realised figures from history (read-only).
+                a_def = hnw[label][0] if label in hnw else None
+                l_def = hnw[label][1] if label in hnw else None
+            elif label in hnw:
                 a_def, l_def = hnw[label]
             else:
                 a_def, l_def = prev_a, prev_l
-            if idx == 0:
+
+            if idx <= cur_idx:
+                # Current (and last) month use real income/expense from transactions.
                 inc = ov.get("income") if ov.get("income") is not None else s['income']
                 exp = ov.get("expense") if ov.get("expense") is not None else s['expense']
             else:
                 inc = ov.get("income") if ov.get("income") is not None else 0.0
                 exp = ov.get("expense") if ov.get("expense") is not None else 0.0
-            # Current month uses the real net worth; future months roll the
-            # prior month's assets forward by this month's net (income - expense)
-            # unless an explicit override was entered.
+
+            # Current month rolls forward like future months: the prior month's
+            # assets plus this month's net (income - expense), unless an
+            # explicit override was entered, so editing income/expense is
+            # reflected in the assets column and the charts.
             a_ov = ov.get("assets")
             if a_ov is not None:
                 a = a_ov
-            elif idx == 0:
+            elif idx < cur_idx:
                 a = a_def
             else:
                 a = (prev_a + (inc - exp)) if prev_a is not None else (inc - exp)
-            l = ov.get("liabilities") if ov.get("liabilities") is not None else l_def
+            l = ov.get("liabilities") if ov.get("liabilities") is not None else (l_def if l_def is not None else prev_l)
             prev_a, prev_l = a, l
             assets.append(a)
             liabilities.append(l)
@@ -549,7 +559,8 @@ class BudgetTab(QWidget):
             ]
             for col, txt in enumerate(cells, start=1):
                 item = QTableWidgetItem(txt)
-                # The current month (index 0) is read-only; only future months are editable.
+                # The previous month (index 0) is read-only; the current month
+                # and all future months are editable.
                 if i == 0:
                     item.setFlags(Qt.ItemFlag.ItemIsEnabled)
                 self.forecast_table.setItem(i, col, item)
@@ -674,11 +685,12 @@ class BudgetTab(QWidget):
         return assets, liabilities
 
     def _prune_stale_forecasts(self):
-        # Months that have already arrived are driven by actuals; any leftover
-        # forecast override for them is dropped (no need to retain it).
+        # Months that have already passed are driven by actuals; any leftover
+        # forecast override for them is dropped (no need to retain it). The
+        # current month keeps overrides, which the user can edit.
         cur = datetime.now().strftime("%Y-%m")
         for month in list(self.db.get_forecast().keys()):
-            if month <= cur:
+            if month < cur:
                 self.db.delete_forecast(month)
 
     def refresh(self):

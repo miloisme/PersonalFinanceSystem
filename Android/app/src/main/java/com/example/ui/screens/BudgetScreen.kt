@@ -40,6 +40,7 @@ fun BudgetScreen(
     transactions: List<TransactionItem>,
     budgetAccountIds: Set<Long>,
     forecast: Map<String, BudgetForecastItem>,
+    history: List<NetWorthHistoryItem>,
     onToggleAccount: (Long, Boolean) -> Unit,
     onAddFund: (String, Double, List<Long>) -> Unit,
     onUpdateFund: (Long, String, Double, List<Long>) -> Unit,
@@ -81,13 +82,14 @@ fun BudgetScreen(
     // Dialog state for forecast cell edit
     var editingForecastCell by remember { mutableStateOf<Pair<String, String>?>(null) }
 
-    // 12-month projection series
-    val forecastSeries = remember(accounts, debts, transactions, forecast, baseCurrency) {
+    // 13-month projection series (last month + current + future)
+    val forecastSeries = remember(accounts, debts, transactions, forecast, history, baseCurrency) {
         computeForecastSeries(
             accounts = accounts,
             debts = debts,
             transactions = transactions,
             forecast = forecast,
+            history = history,
             baseCurrency = baseCurrency
         )
     }
@@ -338,7 +340,7 @@ fun BudgetScreen(
             ) {
                 Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
                     Text(
-                        text = "Forecast Table (Tap cells to override future estimates)",
+                        text = "Forecast Table (Tap cells to override current/future estimates)",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = NavySidebar
@@ -368,7 +370,9 @@ fun BudgetScreen(
                         // Data rows
                         forecastSeries.labels.indices.forEach { i ->
                             val m = forecastSeries.labels[i]
-                            val isCurrentMonth = i == 0
+                            // Only the previous month (row 0) is read-only; the
+                            // current month and future months are editable.
+                            val isReadOnly = i == 0
 
                             Row(
                                 modifier = Modifier
@@ -384,7 +388,7 @@ fun BudgetScreen(
                                     fontSize = 11.sp,
                                     modifier = Modifier
                                         .width(95.dp)
-                                        .clickable(enabled = !isCurrentMonth) {
+                                        .clickable(enabled = !isReadOnly) {
                                             editingForecastCell = Pair(m, "assets")
                                         },
                                     color = PrimaryBlueDeep
@@ -396,7 +400,7 @@ fun BudgetScreen(
                                     fontSize = 11.sp,
                                     modifier = Modifier
                                         .width(95.dp)
-                                        .clickable(enabled = !isCurrentMonth) {
+                                        .clickable(enabled = !isReadOnly) {
                                             editingForecastCell = Pair(m, "liabilities")
                                         },
                                     color = OrangeDark
@@ -408,7 +412,7 @@ fun BudgetScreen(
                                     fontSize = 11.sp,
                                     modifier = Modifier
                                         .width(90.dp)
-                                        .clickable(enabled = !isCurrentMonth) {
+                                        .clickable(enabled = !isReadOnly) {
                                             editingForecastCell = Pair(m, "income")
                                         },
                                     color = GreenIncome
@@ -420,7 +424,7 @@ fun BudgetScreen(
                                     fontSize = 11.sp,
                                     modifier = Modifier
                                         .width(90.dp)
-                                        .clickable(enabled = !isCurrentMonth) {
+                                        .clickable(enabled = !isReadOnly) {
                                             editingForecastCell = Pair(m, "expense")
                                         },
                                     color = RedExpense
@@ -735,23 +739,29 @@ fun computeForecastSeries(
     debts: List<DebtItem>,
     transactions: List<TransactionItem>,
     forecast: Map<String, BudgetForecastItem>,
+    history: List<NetWorthHistoryItem>,
     baseCurrency: String
 ): ForecastSeriesData {
+    // Start from the previous month so the table shows last month's realised
+    // figures (read-only) followed by the editable current/future months.
     val labels = mutableListOf<String>()
     val cal = Calendar.getInstance()
-    for (i in 0 until 12) {
+    cal.add(Calendar.MONTH, -1)
+    for (i in 0 until 13) {
         val y = cal.get(Calendar.YEAR)
         val m = cal.get(Calendar.MONTH) + 1
         labels.add("%04d-%02d".format(y, m))
         cal.add(Calendar.MONTH, 1)
     }
 
-    // Live asset total includes account balances and uncompleted receivables (debtor == "other")
-    val liveAssets = accounts.sumOf { CurrencyConverter.convert(it.balance, it.currency, baseCurrency) } +
-        debts.filter { !it.completed && it.debtor == "other" }
-            .sumOf { CurrencyConverter.convert(it.totalAmount - it.paidAmount, it.currency, baseCurrency) }
     val liveLiab = debts.filter { !it.completed && it.debtor == "me" }
         .sumOf { CurrencyConverter.convert(it.totalAmount - it.paidAmount, it.currency, baseCurrency) }
+
+    // Snapshot history keyed by month -> pair(assets, liabilities), last entry wins.
+    val histByMonth = mutableMapOf<String, Pair<Double, Double>>()
+    for (h in history) {
+        histByMonth[h.date.take(7)] = h.assets to h.liabilities
+    }
 
     val assetsList = mutableListOf<Double?>()
     val liabList = mutableListOf<Double?>()
@@ -759,26 +769,34 @@ fun computeForecastSeries(
     val expList = mutableListOf<Double?>()
     val balList = mutableListOf<Double?>()
 
-    var prevA: Double = liveAssets
-    var prevL: Double = liveLiab
+    var prevA: Double? = null
+    var prevL: Double? = null
 
     for (i in labels.indices) {
         val m = labels[i]
         val ov = forecast[m]
-        val isCurrent = (i == 0)
+        val isLastMonth = (i == 0)
+        val isCurrent = (i == 1)
 
-        val inc = ov?.income ?: if (isCurrent) {
+        val inc = ov?.income ?: if (isLastMonth || isCurrent) {
             transactions.filter { it.date.startsWith(m) && it.type == "income" }.sumOf { it.baseAmount }
         } else 0.0
-
-        val exp = ov?.expense ?: if (isCurrent) {
+        val exp = ov?.expense ?: if (isLastMonth || isCurrent) {
             transactions.filter { it.date.startsWith(m) && it.type == "expense" }.sumOf { it.baseAmount }
         } else 0.0
-
         val bal = inc - exp
 
-        val a = ov?.assets ?: if (isCurrent) liveAssets else (prevA + bal)
-        val l = ov?.liabilities ?: if (isCurrent) liveLiab else prevL
+        val a = when {
+            ov?.assets != null -> ov.assets
+            isLastMonth -> histByMonth[m]?.first ?: prevA
+            else -> prevA?.let { it + bal } ?: bal
+        }
+        val l = when {
+            ov?.liabilities != null -> ov.liabilities
+            isLastMonth -> histByMonth[m]?.second ?: prevL
+            isCurrent -> liveLiab
+            else -> prevL ?: 0.0
+        }
 
         prevA = a
         prevL = l

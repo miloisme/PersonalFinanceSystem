@@ -267,9 +267,18 @@ class ChartsTab(QWidget):
             d = QDate.fromString(saved_end, "yyyy-MM-dd")
             if d.isValid():
                 self.end_date.setDate(d)
+            else:
+                d = QDate.currentDate()
+                self.end_date.setDate(QDate(d.year(), d.month(), d.daysInMonth()))
         else:
             d = QDate.currentDate()
             self.end_date.setDate(QDate(d.year(), d.month(), d.daysInMonth()))
+        # Ensure the range always includes the current month so the dashboard
+        # charts actually show a data point for it.
+        now = QDate.currentDate()
+        cur_first = QDate(now.year(), now.month(), 1)
+        if self.end_date.date() < cur_first:
+            self.end_date.setDate(QDate(now.year(), now.month(), now.daysInMonth()))
 
     def on_range_changed(self):
         self.db.set_setting("dash_start_date", self.start_date.date().toString("yyyy-MM-dd"))
@@ -288,6 +297,12 @@ class ChartsTab(QWidget):
         return symbols.get(currency, currency + " ")
 
     def refresh(self):
+        # Ensure the visible range always includes the current month.
+        now = QDate.currentDate()
+        cur_first = QDate(now.year(), now.month(), 1)
+        if self.end_date.date() < cur_first:
+            self.end_date.setDate(QDate(now.year(), now.month(), now.daysInMonth()))
+
         self.db.set_setting("dash_start_date", self.start_date.date().toString("yyyy-MM-dd"))
         self.db.set_setting("dash_end_date", self.end_date.date().toString("yyyy-MM-dd"))
 
@@ -300,7 +315,7 @@ class ChartsTab(QWidget):
         today = datetime.now().strftime("%Y-%m-%d")
         self.db.upsert_net_worth(today, assets, liabilities)
 
-        self.draw_assets_liabilities(start, end, period)
+        self.draw_assets_liabilities(start, end, period, assets, liabilities)
         self.draw_income_expense(start, end, period)
         self.draw_balance(start, end, period)
         self._fill_summary_table(start, end, period)
@@ -441,7 +456,9 @@ class ChartsTab(QWidget):
                 liabilities += amount
         return assets, liabilities
 
-    def draw_assets_liabilities(self, start: date, end: date, period: str):
+    def draw_assets_liabilities(self, start: date, end: date, period: str,
+                                live_assets: float | None = None,
+                                live_liabilities: float | None = None):
         self.net_fig.clear()
         ax = self.net_fig.add_subplot(111)
 
@@ -451,8 +468,20 @@ class ChartsTab(QWidget):
             by_period = {h['date'][:4]: h for h in full_history}
         else:
             by_period = {h['date'][:7]: h for h in full_history}
-        asset_vals = [by_period[lab]['assets'] if lab in by_period else None for lab in labels]
-        liab_vals = [by_period[lab]['liabilities'] if lab in by_period else None for lab in labels]
+
+        now = datetime.now()
+        cur_label = str(now.year) if period == "year" else now.strftime("%Y-%m")
+        asset_vals = []
+        liab_vals = []
+        for lab in labels:
+            if lab == cur_label and live_assets is not None:
+                # Always show live totals for the current period so the chart
+                # has a data point even if no snapshot exists yet.
+                asset_vals.append(live_assets)
+                liab_vals.append(live_liabilities if live_liabilities is not None else 0.0)
+            else:
+                asset_vals.append(by_period[lab]['assets'] if lab in by_period else None)
+                liab_vals.append(by_period[lab]['liabilities'] if lab in by_period else None)
 
         if not any(v is not None for v in asset_vals + liab_vals):
             ax.text(0.5, 0.5, 'No Data', ha='center', va='center',

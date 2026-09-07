@@ -565,6 +565,21 @@ fun computeDashboardPeriods(
         if (period == "year") it.date.take(4) else it.date.take(7)
     }
 
+    // Guarantee the chart range always includes the current period so the
+    // dashboard actually shows a data point for it (even if the stored end
+    // date is in the past).
+    val curLabel = if (period == "year") nowY.toString() else "%04d-%02d".format(nowY, nowM)
+    if (labels.isNotEmpty() && labels.last() < curLabel) {
+        val extra = endCal.clone() as Calendar
+        while (true) {
+            extra.add(Calendar.MONTH, 1)
+            val y = extra.get(Calendar.YEAR)
+            val m = extra.get(Calendar.MONTH) + 1
+            labels.add(if (period == "year") y.toString() else "%04d-%02d".format(y, m))
+            if (labels.last() >= curLabel) break
+        }
+    }
+
     // Live asset total includes account balances and uncompleted receivables (debtor == "other")
     val liveAssets = accounts.sumOf { CurrencyConverter.convert(it.balance, it.currency, baseCurrency) } +
         debts.filter { !it.completed && it.debtor == "other" }

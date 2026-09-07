@@ -107,8 +107,19 @@ def is_authenticated() -> bool:
         return False
 
 
+def _clear_token():
+    """Remove the stored OAuth token so a fresh consent flow can run."""
+    global _SERVICE
+    _SERVICE = None
+    if os.path.exists(TOKEN_PATH):
+        try:
+            os.remove(TOKEN_PATH)
+        except Exception:
+            pass
+
+
 def authenticate() -> bool:
-    """Run the OAuth consent flow (local browser). Returns True on success."""
+    """Ensure a valid OAuth credential, refreshing or re-consenting if expired."""
     if not _HAS_GOOGLE:
         raise RuntimeError(
             "Google API libraries are not installed. Run: pip install "
@@ -120,12 +131,28 @@ def authenticate() -> bool:
             "Create a Desktop OAuth client in Google Cloud and save it there."
         )
 
+    global _SERVICE
+    _SERVICE = None  # reset cached service so new credentials are used
+
     creds = None
-    if os.path.exists(TOKEN_PATH):
-        creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+    try:
+        if os.path.exists(TOKEN_PATH):
+            creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+    except Exception:
+        creds = None
+
+    # Try to refresh an expired token; if refresh fails (token revoked /
+    # expired), clear it and fall through to a fresh browser consent flow.
     if creds and creds.expired and creds.refresh_token:
-        creds.refresh(Request())
-    if not creds or not creds.valid:
+        try:
+            creds.refresh(Request())
+        except Exception:
+            creds = None
+
+    if creds is not None and not creds.valid:
+        creds = None
+
+    if creds is None:
         flow = InstalledAppFlow.from_client_secrets_file(
             CLIENT_SECRET_PATH, SCOPES
         )
@@ -141,9 +168,18 @@ def _get_service():
         return _SERVICE
     if not _HAS_GOOGLE:
         raise RuntimeError("Google API libraries are not installed.")
+    if not os.path.exists(TOKEN_PATH):
+        authenticate()
     creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
     if creds.expired and creds.refresh_token:
-        creds.refresh(Request())
+        try:
+            creds.refresh(Request())
+        except Exception:
+            authenticate()
+            creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+    if not creds.valid:
+        authenticate()
+        creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
     _SERVICE = build("drive", "v3", credentials=creds)
     return _SERVICE
 
