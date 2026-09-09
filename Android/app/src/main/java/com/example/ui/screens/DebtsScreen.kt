@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -262,6 +263,7 @@ fun DebtsScreen(
         var dueDate by remember { mutableStateOf(editingDebt?.dueDate ?: "") }
         var interestRate by remember { mutableStateOf(editingDebt?.interestRate?.toString() ?: "0.0") }
         var completed by remember { mutableStateOf(editingDebt?.completed ?: false) }
+        var currencyExpanded by remember { mutableStateOf(false) }
         var notes by remember { mutableStateOf(editingDebt?.notes ?: "") }
 
         AlertDialog(
@@ -305,6 +307,43 @@ fun DebtsScreen(
                             singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
+                    }
+
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = "$currency (${CurrencyConverter.symbol(currency)})",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Currency") },
+                            trailingIcon = {
+                                IconButton(onClick = { currencyExpanded = !currencyExpanded }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Select Currency", tint = PrimaryBlue, modifier = Modifier.size(18.dp))
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { currencyExpanded = true }
+                        )
+                        DropdownMenu(
+                            expanded = currencyExpanded,
+                            onDismissRequest = { currencyExpanded = false },
+                            modifier = Modifier.fillMaxWidth(0.75f).heightIn(max = 260.dp)
+                        ) {
+                            currencies.forEach { c ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            "$c (${CurrencyConverter.symbol(c)})",
+                                            fontWeight = if (c == currency) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    },
+                                    onClick = {
+                                        currency = c
+                                        currencyExpanded = false
+                                    }
+                                )
+                            }
+                        }
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
