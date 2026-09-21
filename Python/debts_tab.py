@@ -370,9 +370,13 @@ class DebtsTab(QWidget):
         return symbols.get(currency, currency + " ")
 
     def _sort_debts(self, debts, base_currency):
-        col = self._sort_col
-        if col is None or not debts:
+        if not debts:
             return debts
+        done = [d for d in debts if getattr(d, "completed", False)]
+        active = [d for d in debts if not getattr(d, "completed", False)]
+        col = self._sort_col
+        if col is None:
+            return active + done
         if col == 0:
             key = lambda d: d.name
         elif col == 1:
@@ -390,8 +394,9 @@ class DebtsTab(QWidget):
         elif col == 7:
             key = lambda d: d.note or ""
         else:
-            return debts
-        return sorted(debts, key=key, reverse=(self._sort_order == Qt.SortOrder.DescendingOrder))
+            return active + done
+        reverse = (self._sort_order == Qt.SortOrder.DescendingOrder)
+        return sorted(active, key=key, reverse=reverse) + sorted(done, key=key, reverse=reverse)
 
     def _apply_sort(self, col, order):
         self._sort_col = col
